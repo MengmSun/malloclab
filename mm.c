@@ -17,11 +17,11 @@ static void place(void *bp, size_t size);
 
 team_t team = {
     /* Team name */
-    "qzy",
+    "lxs",
     /* First member's full name */
-    "qzy",
+    "Xiaosu",
     /* First member's email address */
-    "qzy@XXX.com",
+    "lxs@XXX.com",
     /* Second member's full name (leave blank if none) */
     "",
     /* Second member's email address (leave blank if none) */
@@ -117,24 +117,7 @@ static void* extend_heap(size_t words)
     PUT(FTRP(bp),PACK(size, 0));                /*Free block footer*/
     PUT(HDRP(NEXT_BLKP(bp)),PACK(0,1));         /*New epilogue header*/
 
-    /*Coalesce if the previous block was free*/
-    return coalesce(bp);
-}
-/*
- * mm_init - initialize the malloc package.
- */
-int mm_init(void)
-{
-    /*Create the initial empty heap*/
-    if(heap_listp = mem_sbrk(4*WSIZE) == (void*)-1)
-        return -1;
-    PUT(heap_listp, 0);                         /*Alignment padding*/
-    PUT(heap_listp + (1*WSIZE), PACK(DSIZE, 1));/*Prologue header*/
-    PUT(heap_listp + (2*WSIZE), PACK(DSIZE, 1));/*Prologue footer*/
-    PUT(heap_listp + (3*WSIZE), PACK(0, 1));    /*Epilogue header*/
-    heap_listp += 2*WSIZE;
-
-    /*Extend the empty heap with a free block of CHUNKSIZE bytes*/
+mpty heap with a free block of CHUNKSIZE bytes*/
     if(extend_heap(CHUNKSIZE/WSIZE) == NULL)
         return -1;
     return 0;
