@@ -8,11 +8,10 @@
 #include "memlib.h"
 
 /*Private glovbal variables*/
-static char* heap_listp;
-
-static void *extend_heap(size_t words);
-static void *coalesce(void *bp);
-static void *find_fit(size_t size);
+static char* heap_listp = 0;
+static void* extend_heap(size_t words);
+static void* coalesce(void *bp);
+static void* find_fit(size_t size);
 static void place(void *bp, size_t size);
 
 team_t team = {
@@ -42,10 +41,6 @@ team_t team = {
 #define GET(p) (*(unsigned int *)(p))
 #define PUT(p, val) (*(unsigned int *)(p) = (val))
 
-/* Read and write a pointer at address p */
-#define GET_PTR(p) ((unsigned int *)(long)(GET(p)))
-#define PUT_PTR(p, ptr) (*(unsigned int *)(p) = ((long)ptr))
-
 /* Read the size and allocated fields from address p */
 #define GET_SIZE(p) (GET(p) & ~0x7)
 #define GET_ALLOC(p) (GET(p) & 0x1)
@@ -67,9 +62,28 @@ team_t team = {
 #define SIZE_T_SIZE (ALIGN(sizeof(size_t)))
 
 /*
+ * mm_init - initialize the malloc package.
+ * The return value should be -1 if there was a problem in performing the initialization, 0 otherwise
+ */
+int mm_init(void)
+{
+    if((heap_listp = mem_sbrk(4*WSIZE))==(void *)-1){
+        return -1;
+    }
+    PUT(heap_listp,0);
+    PUT(heap_listp+(1*WSIZE),PACK(DSIZE,1));
+    PUT(heap_listp+(2*WSIZE),PACK(DSIZE,1));
+    PUT(heap_listp+(3*WSIZE),PACK(0,1));
+    heap_listp += (2*WSIZE);
+    if(extend_heap(CHUNKSIZE/WSIZE)==NULL){
+        return -1;
+    }
+    return 0;
+}
+
+/*
  *coalesce
  * */
-
 static void* coalesce(void* bp)
 {
     size_t prev_alloc = GET_ALLOC(FTRP(PREV_BLKP(bp)));
@@ -104,7 +118,7 @@ static void* coalesce(void* bp)
  * */
 static void* extend_heap(size_t words)
 {
-    char bp;
+    char* bp;
     size_t size;
 
     /*allocate an even number to maintain alignment*/
@@ -117,10 +131,7 @@ static void* extend_heap(size_t words)
     PUT(FTRP(bp),PACK(size, 0));                /*Free block footer*/
     PUT(HDRP(NEXT_BLKP(bp)),PACK(0,1));         /*New epilogue header*/
 
-mpty heap with a free block of CHUNKSIZE bytes*/
-    if(extend_heap(CHUNKSIZE/WSIZE) == NULL)
-        return -1;
-    return 0;
+    return coalesce(bp);
 }
 
 /*
@@ -178,7 +189,7 @@ void *mm_malloc(size_t size)
         asize = DSIZE*((size + DSIZE + (DSIZE-1))/DSIZE);
 
     /*Seach the free list for a fit*/
-    if(bp = find_fit(asize) != NULL) {
+    if((bp = find_fit(asize)) != NULL) {
         place(bp,asize);
         return bp;
     }
@@ -196,6 +207,8 @@ void *mm_malloc(size_t size)
  */
 void mm_free(void *bp)
 {
+    if(bp == 0)
+        return;
     size_t size = GET_SIZE(HDRP(bp));
     PUT(HDRP(bp), PACK(size, 0));
     PUT(FTRP(bp), PACK(size, 0));
@@ -220,3 +233,4 @@ void *mm_realloc(void *ptr, size_t size)
     mm_free(oldptr);
     return newptr;
 }
+
