@@ -1,10 +1,7 @@
 /*
  * mm-naive.c - The fastest, least memory-efficient malloc package.
-<<<<<<< HEAD
  *
-=======
- * 
->>>>>>> 4b9b2b25a9af5985759e0d777fca0dd6809e809d
+ *
  * In this naive approach, a block is allocated by simply incrementing
  * the brk pointer.  A block is pure payload. There are no headers or
  * footers.  Blocks are never coalesced or reused. Realloc is
@@ -39,7 +36,6 @@ team_t team = {
     ""
 };
 
-<<<<<<< HEAD
 /*Private glovbal variables*/
 static char* mem_heap;          /*Points to first byte of heap*/
 static char* mem_brk;           /*Points to last byte of heap plus 1*/
@@ -71,8 +67,6 @@ static char* mem_max_addr;      /*Max legal heap addr plus 1*/
 #define NEXT_BLKP(bp) (char*)bp + GET_SIZE(GET((char*)bp-WSIZE))
 #define PREV_BLKP(bp) (char*)bp - GET_SIZE(GET((char*)bp-DSIZE))
 
-=======
->>>>>>> 4b9b2b25a9af5985759e0d777fca0dd6809e809d
 /* single word (4) or double word (8) alignment */
 #define ALIGNMENT 8
 
@@ -82,7 +76,6 @@ static char* mem_max_addr;      /*Max legal heap addr plus 1*/
 
 #define SIZE_T_SIZE (ALIGN(sizeof(size_t)))
 
-<<<<<<< HEAD
 /*
  * mem_sbrk - Simple model of the sbrk function.Extends the heap
  * by incr bytes and return the start address of the new area.In
@@ -153,14 +146,10 @@ static void* extend_heap(size_t words)
     return coalesce(bp);
 }
 /*
-=======
-/* 
->>>>>>> 4b9b2b25a9af5985759e0d777fca0dd6809e809d
  * mm_init - initialize the malloc package.
  */
 int mm_init(void)
 {
-<<<<<<< HEAD
     /*Create the initial empty heap*/
     if(heap_listp = mem_sbrk(4*WSIZE) == (void*)-1)
         return -1;
@@ -205,18 +194,11 @@ static void place(char* bp, size_t size)
 }
 
 /*
-=======
-    return 0;
-}
-
-/* 
->>>>>>> 4b9b2b25a9af5985759e0d777fca0dd6809e809d
  * mm_malloc - Allocate a block by incrementing the brk pointer.
  *     Always allocate a block whose size is a multiple of the alignment.
  */
 void *mm_malloc(size_t size)
 {
-<<<<<<< HEAD
     size_t asize;                               /*Ajusted block size*/
     size_t extendsize;                          /*Amount to extend heap if no fit*/
     char* bp;
@@ -254,7 +236,6 @@ void mm_free(void *ptr)
     PUT(HDRP(bp), PACK(size, 0));
     PUT(FTRP(bp), PACK(size, 0));
     coalesce(bp);
-=======
     int newsize = ALIGN(size + SIZE_T_SIZE);
     void *p = mem_sbrk(newsize);
     if (p == (void *)-1)
@@ -266,14 +247,6 @@ void mm_free(void *ptr)
 }
 
 /*
- * mm_free - Freeing a block does nothing.
- */
-void mm_free(void *ptr)
-{
->>>>>>> 4b9b2b25a9af5985759e0d777fca0dd6809e809d
-}
-
-/*
  * mm_realloc - Implemented simply in terms of mm_malloc and mm_free
  */
 void *mm_realloc(void *ptr, size_t size)
@@ -281,11 +254,6 @@ void *mm_realloc(void *ptr, size_t size)
     void *oldptr = ptr;
     void *newptr;
     size_t copySize;
-<<<<<<< HEAD
-
-=======
-    
->>>>>>> 4b9b2b25a9af5985759e0d777fca0dd6809e809d
     newptr = mm_malloc(size);
     if (newptr == NULL)
       return NULL;
@@ -296,20 +264,3 @@ void *mm_realloc(void *ptr, size_t size)
     mm_free(oldptr);
     return newptr;
 }
-
-<<<<<<< HEAD
-=======
-
-
-
-
-
-
-
-
-
-
-
-
-
->>>>>>> 4b9b2b25a9af5985759e0d777fca0dd6809e809d
