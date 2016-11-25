@@ -6,13 +6,9 @@ extern void mm_free (void *ptr);
 extern void *mm_realloc(void *ptr, size_t size);
 
 
-<<<<<<< HEAD
 /*
  * Students work in teams of one or two.  Teams enter their team name,
-=======
-/* 
- * Students work in teams of one or two.  Teams enter their team name, 
->>>>>>> 4b9b2b25a9af5985759e0d777fca0dd6809e809d
+ * Students work in teams of one or two.  Teams enter their team name,
  * personal names and login IDs in a struct of this
  * type in their bits.c file.
  */
@@ -25,9 +21,3 @@ typedef struct {
 } team_t;
 
 extern team_t team;
-
-<<<<<<< HEAD
-
-
-=======
->>>>>>> 4b9b2b25a9af5985759e0d777fca0dd6809e809d
