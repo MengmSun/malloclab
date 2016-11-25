@@ -236,12 +236,13 @@ void *mm_realloc(void *ptr, size_t size)
     mm_free(oldptr);
     return newptr;
     */
-    /*ptr is a block pointer*/
+
+    //ptr is a block pointer
     void* newptr;
     size_t csize;
     size_t newsize;
 
-    /*if ptr = NULL,it's equivalent to mm_malloc(size)*/
+    //if ptr = NULL,it's equivalent to mm_malloc(size)
     if(ptr == NULL) {
         newptr = mm_malloc(size);
         if(!newptr) {
@@ -250,18 +251,19 @@ void *mm_realloc(void *ptr, size_t size)
         return newptr;
     }
 
-    /*if size = 0,it's equivalent to mm_free(ptr)*/
+    //if size = 0,it's equivalent to mm_free(ptr)
     if(size == 0) {
         mm_free(ptr);
         return NULL;
     }
 
-    /*normal realloc*/
+    //normal realloc
     csize = GET_SIZE(HDRP(ptr));
     newsize = ALIGN(size) + DSIZE;
     newptr = ptr;
     PUT(HDRP(newptr), PACK(newsize, 1));
     PUT(HDRP(newptr), PACK(newsize, 1));
     return newptr;
+
 }
 
