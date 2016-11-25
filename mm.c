@@ -3,39 +3,60 @@
 #include <assert.h>
 #include <unistd.h>
 #include <string.h>
+
 #include "mm.h"
 #include "memlib.h"
 
 /*Private glovbal variables*/
-static char* mem_heap;          /*Points to first byte of heap*/
-static char* mem_brk;           /*Points to last byte of heap plus 1*/
-static char* mem_max_addr;      /*Max legal heap addr plus 1*/
+static char* heap_listp;
 
-/*Basic constants and macros*/
-#define WSIZE 4          /*Wrod and header/footer size in bytes*/
-#define DSIZE 8          /*Double word size in bytes*/
-#define CHUNKSIZE (1<<12)/*Extend heap by this amount in bytes-4KB*/
+static void *extend_heap(size_t words);
+static void *coalesce(void *bp);
+static void *find_fit(size_t size);
+static void place(void *bp, size_t size);
 
-#define MAX(a,b) ((a)>(b)?(a):(b))
+team_t team = {
+    /* Team name */
+    "qzy",
+    /* First member's full name */
+    "qzy",
+    /* First member's email address */
+    "qzy@XXX.com",
+    /* Second member's full name (leave blank if none) */
+    "",
+    /* Second member's email address (leave blank if none) */
+    ""
+};
 
-/*Pack a size and allocated bit into a word*/
-#define PACK(size,alloc) ((size)|(alloc))
+/* Basic constants and macros */
+#define WSIZE 4     /* Word and header/footer size (bytes) */
+#define DSIZE 8     /* Double word size (bytes) */
+#define CHUNKSIZE (1<<12)     /* Extend heap by this amount (bytes) */
 
-/*Read and write a word at address p*/
-#define GET(p) (*(unsigned int*)(p) )
-#define PUT(p, val) (*(unsigned int*)(p) = (val) )
+#define MAX(x, y) ((x) > (y) ? (x) : (y))
 
-/*Read the size and allocated fields from address p*/
-#define GET_SIZE(p) (GET(p) & (~0x7) )
-#define GET_ALLOC(p) (GET(p) & (0x1) )
+/* Pack a size and allocated bit into  word */
+#define PACK(size, alloc) ((size) | (alloc))
 
-/*Given block ptr bp,compute its address of its header and footer*/
-#define HDRP(bp) ((char*)(bp) - WSIZE))
-#define FTRp(bp) ((char*)(bp) + GET_SIZE(HDRP(bp)) - DSIZE)
+/* Read and write a word at address p */
+#define GET(p) (*(unsigned int *)(p))
+#define PUT(p, val) (*(unsigned int *)(p) = (val))
 
-/*Given block ptr bp,compute address of next and previous blocks*/
-#define NEXT_BLKP(bp) ((char*)(bp) + GET_SIZE(GET((char*)(bp)-WSIZE)))
-#define PREV_BLKP(bp) ((char*)(bp) - GET_SIZE(GET((char*)(bp)-DSIZE)))
+/* Read and write a pointer at address p */
+#define GET_PTR(p) ((unsigned int *)(long)(GET(p)))
+#define PUT_PTR(p, ptr) (*(unsigned int *)(p) = ((long)ptr))
+
+/* Read the size and allocated fields from address p */
+#define GET_SIZE(p) (GET(p) & ~0x7)
+#define GET_ALLOC(p) (GET(p) & 0x1)
+
+/* Given block ptr bp, compute address of its header and footer */
+#define HDRP(bp) ((char *)(bp) - WSIZE)
+#define FTRP(bp) ((char *)(bp) + GET_SIZE(HDRP(bp)) - DSIZE)
+
+/* Given block ptr bp, compute address of next and previous blocks */
+#define NEXT_BLKP(bp) ((char *)(bp) + GET_SIZE(((char *)(bp) - WSIZE)))
+#define PREV_BLKP(bp) ((char *)(bp) - GET_SIZE(((char *)(bp) - DSIZE)))
 
 /* single word (4) or double word (8) alignment */
 #define ALIGNMENT 8
@@ -43,26 +64,7 @@ static char* mem_max_addr;      /*Max legal heap addr plus 1*/
 /* rounds up to the nearest multiple of ALIGNMENT */
 #define ALIGN(size) (((size) + (ALIGNMENT-1)) & ~0x7)
 
-
 #define SIZE_T_SIZE (ALIGN(sizeof(size_t)))
-
-/*
- * mem_sbrk - Simple model of the sbrk function.Extends the heap
- * by incr bytes and return the start address of the new area.In
- * this model,the heap cannot be shrunk.
- * */
-
-void* mem_sbrk(int incr)
-{
-    char* old_brk = mem_brk;
-    if((incr < 0) || ((mem_brk+incr) > mem_max_addr)) {
-        //errno = ENOMEM;
-        //fprintf(stderr,"ERROR: mem_sbrk failed.Ran out of memory...\n");
-        return (void*)-1;
-    }
-    mem_brk += incr;
-    return (void*)old_brk;
-}
 
 /*
  *coalesce
@@ -142,13 +144,13 @@ int mm_init(void)
  * find_fit - First Fit strategy
  * - implicit free list
  * */
-static char* find_fit(size_t size)
+static void* find_fit(size_t size)
 {
     /*First fit search*/
     void* bp;
 
     for(bp = heap_listp ; GET_SIZE(HDRP(bp)) > 0 ; bp = NEXT_BLKP(bp))
-        if(!GET_ALLOC(HDRP(bp)) && GET_SIZE(HDRP(bp)) >= size)
+        if(!GET_ALLOC(HDRP(bp)) && ( GET_SIZE(HDRP(bp)) >= size) )
             return bp;
     return NULL;
 }
@@ -156,7 +158,7 @@ static char* find_fit(size_t size)
 /*
  * place
  * */
-static void place(char* bp, size_t size)
+static void place(void* bp, size_t size)
 {
     size_t csize = GET_SIZE(HDRP(bp));
     if((csize-size) >= 2*DSIZE) {
