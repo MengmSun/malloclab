@@ -10,12 +10,14 @@
 /*Private glovbal variables*/
 static char* heap_listp = NULL;
 static char* root = NULL;
-static void* extend_heap(size_t words);
-static void* coalesce(void *bp);
+static char* block_list_start = NULL;
+static void* extend_heap(size_t size);
+static void* coalesce(void* bp);
 static void* find_fit(size_t size);
-static void place(void *bp, size_t size);
+static void place(void* bp, size_t size);
 static void insert(char* bp);
 static void delete(char* bp);
+static char* find_list_root(size_t size);
 
 team_t team = {
     /* Team name */
@@ -77,17 +79,26 @@ team_t team = {
  */
 int mm_init(void)
 {
-    if((heap_listp = mem_sbrk(6*WSIZE))==(void *)-1){
+    if((heap_listp = mem_sbrk(14*WSIZE))==(void *)-1){
         return -1;
     }
     PUT(heap_listp, 0);
     PUT(heap_listp+(1*WSIZE), 0);
     PUT(heap_listp+(2*WSIZE), 0);
-    PUT(heap_listp+(3*WSIZE), PACK(DSIZE, 1));
-    PUT(heap_listp+(4*WSIZE), PACK(DSIZE, 1));
-    PUT(heap_listp+(5*WSIZE), PACK(0, 1));
-    root = heap_listp + (1*WSIZE);
-    heap_listp += (4*WSIZE);
+    PUT(heap_listp+(3*WSIZE), 0);
+    PUT(heap_listp+(4*WSIZE), 0);
+    PUT(heap_listp+(5*WSIZE), 0);
+    PUT(heap_listp+(6*WSIZE), 0);
+    PUT(heap_listp+(7*WSIZE), 0);
+    PUT(heap_listp+(8*WSIZE), 0);
+    PUT(heap_listp+(9*WSIZE), 0);
+    PUT(heap_listp+(10*WSIZE), 0);                          //why would this block exist?
+    PUT(heap_listp+(11*WSIZE), PACK(DSIZE, 1));
+    PUT(heap_listp+(12*WSIZE), PACK(DSIZE, 1));
+    PUT(heap_listp+(13*WSIZE), PACK(0, 1));
+
+    block_list_start = heap_listp;
+    heap_listp += (12*WSIZE);
 
     /*explict block's size is aligned to 8 bytes*/
     if(extend_heap(CHUNKSIZE/DSIZE) == NULL)
@@ -96,15 +107,54 @@ int mm_init(void)
 }
 
 /*
+ * find_list_root - find the exact list according to the block size
+ * */
+static char* find_list_root(size_t size)
+{
+    int index = 0;
+    if(size <= 8) index = 0;
+    else if(size <= 16) index = 1;
+    else if(size <= 32) index = 2;
+    else if(size <= 64) index = 3;
+    else if(size <= 128) index = 4;
+    else if(size <= 256) index = 5;
+    else if(size <= 512) index = 6;
+    else if(size <= 1024) index = 7;
+    else if(size <= 2048) index = 8;
+    else index = 9;
+    return block_list_start + index*WSIZE;
+}
+
+/*
  * insert - insert free block into the list
+ * expand from small to big
  * */
 static void insert(char* bp)
 {
-    char* nextp = GET(root);
-    if(nextp != NULL)
-        PUT(ABOV_FREE_BLKP(nextp), bp);
-    PUT(DOWN_FREE_BLKP(bp), nextp);
-    PUT(root, bp);
+    char* root = find_list_root(GET_SIZE(HDRP(bp)));
+    char* down = GET(root);
+    char* abov = root;
+
+    while(down != NULL) {
+        if(GET_SIZE(HDRP(down)) >= GET_SIZE(HDRP(bp)))
+            break;
+        abov = down;
+        down = GET(DOWN_FREE_BLKP(down));
+    }
+    if(abov == root) {
+        PUT(DOWN_FREE_BLKP(bp), down);
+        PUT(ABOV_FREE_BLKP(bp), NULL);
+        if(down != NULL)
+            PUT(ABOV_FREE_BLKP(down), bp);
+        PUT(root, bp);
+    }
+    else {
+        PUT(DOWN_FREE_BLKP(abov), bp);
+        PUT(ABOV_FREE_BLKP(bp), abov);
+        PUT(DOWN_FREE_BLKP(bp), down);
+        if(down != NULL)
+            PUT(ABOV_FREE_BLKP(down), bp);
+    }
 }
 
 /*
@@ -113,6 +163,7 @@ static void insert(char* bp)
  * */
 static void delete(char* bp)
 {
+    char* root = find_list_root(GET_SIZE(HDRP(bp)));
     char* abov = GET(ABOV_FREE_BLKP(bp));
     char* down = GET(DOWN_FREE_BLKP(bp));
 
@@ -192,17 +243,21 @@ static void* extend_heap(size_t words)
 
 /*
  * find_fit - First Fit strategy
- * - implicit free list
+ * - explicit free list
  * */
 static void* find_fit(size_t size)
 {
     /*First fit search*/
-    char* cur = GET(root);
+    char* root = find_list_root(size);
+    char* cur;
 
-    while(cur != NULL) {
-        if(GET_SIZE(HDRP(cur)) >= size)
-            return cur;
-        cur = GET(DOWN_FREE_BLKP(cur));
+    for(root;root != heap_listp-2*WSIZE;root += WSIZE) {
+        cur = (char*)GET(root);
+        while(cur != NULL) {
+            if(GET_SIZE(HDRP(cur)) >= size)
+                return cur;
+            cur = GET(DOWN_FREE_BLKP(cur));
+        }
     }
     return NULL;
 }
